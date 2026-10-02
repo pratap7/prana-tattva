@@ -1,9 +1,29 @@
+'use client';
+
 import Link from 'next/link';
 import { ThemeToggle } from './theme-toggle';
 import { Button } from '@/components/ui/button';
-import { Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 export function Header() {
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
+
+  const getDashboardHref = () => {
+    if (!user) return '/dashboard';
+    if (user.role === 'ADMIN') return '/admin/dashboard';
+    if (user.role === 'PROVIDER') return '/provider/dashboard';
+    return '/dashboard';
+  };
+
+  const getRoleLabel = () => {
+    if (!user) return '';
+    if (user.role === 'ADMIN') return 'Admin';
+    if (user.role === 'PROVIDER') return 'Practitioner';
+    return 'Seeker';
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/85 backdrop-blur-md transition-colors">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
@@ -30,12 +50,52 @@ export function Header() {
 
         <div className="flex items-center space-x-3">
           <ThemeToggle />
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/login">Sign in</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/services">Book a Session</Link>
-          </Button>
+
+          {!isLoading && isAuthenticated && user ? (
+            <div className="flex items-center space-x-3">
+              <Link href={getDashboardHref()} className="flex items-center space-x-2 text-sm">
+                <Badge
+                  variant={
+                    user.role === 'ADMIN'
+                      ? 'destructive'
+                      : user.role === 'PROVIDER'
+                        ? 'success'
+                        : 'default'
+                  }
+                  className="font-normal"
+                >
+                  {getRoleLabel()}
+                </Badge>
+                <span className="hidden sm:inline font-medium text-foreground max-w-[120px] truncate">
+                  {user.name}
+                </span>
+              </Link>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={getDashboardHref()}>
+                  <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
+                  Dashboard
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => logout()}
+                title="Log out"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/login">Sign in</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/signup">Join Sanctuary</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </header>

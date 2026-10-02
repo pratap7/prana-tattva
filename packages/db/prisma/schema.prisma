@@ -143,6 +143,12 @@ enum ConsentType {
   MARKETING
 }
 
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  PHONE_OTP
+}
+
 // ============================================================================
 // CORE IDENTITY & PROFILES
 // ============================================================================
@@ -162,6 +168,8 @@ model User {
   deletedAt       DateTime? // Soft-delete support
 
   providerProfile       ProviderProfile?
+  refreshTokens         RefreshToken[]
+  authTokens            AuthToken[]
   consumerBookings      Booking[]        @relation("ConsumerBookings")
   providerBookings      Booking[]        @relation("ProviderBookings")
   reviewsGiven          Review[]         @relation("ConsumerReviews")
@@ -180,6 +188,34 @@ model User {
   @@index([role, status])
   @@index([deletedAt])
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique @map("token_hash")
+  familyId  String   @map("family_id")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isRevoked])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model AuthToken {
+  id        String        @id @default(uuid())
+  userId    String        @map("user_id")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String        @unique @map("token_hash")
+  type      AuthTokenType
+  expiresAt DateTime      @map("expires_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@index([userId, type])
+  @@map("auth_tokens")
 }
 
 model ProviderProfile {
