@@ -141,6 +141,7 @@ enum ConsentType {
   DATA_PROCESSING
   HEALTH_DATA_CONSENT
   MARKETING
+  SESSION_RECORDING
 }
 
 enum AuthTokenType {
@@ -353,9 +354,13 @@ model Service {
   isGroup            Boolean            @default(false)
   maxParticipants    Int                @default(1)
   isActive           Boolean            @default(true)
-  cancellationPolicy CancellationPolicy @default(MODERATE)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  cancellationPolicy   CancellationPolicy @default(MODERATE)
+  locationAddress      String?
+  locationCity         String?
+  locationCoordinates  Json?
+  locationInstructions String?            @db.Text
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   bookings Booking[]
 
@@ -442,6 +447,11 @@ model Session {
   bookingId          String    @unique
   booking            Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   videoRoomName      String // Daily.co room name
+  videoRoomUrl       String? // Full Daily.co room URL
+  extendedMinutes    Int       @default(0) // Overtime minutes extended
+  recordingStatus    String    @default("DISABLED") // DISABLED, CONSENT_PENDING, RECORDING, COMPLETED
+  recordingConsents  Json? // Map of user IDs who granted recording consent
+  metadata           Json? // Webhook event tracking and Daily session details
   startedAt          DateTime? // Actual UTC session start
   endedAt            DateTime? // Actual UTC session end
   joinedByConsumerAt DateTime?

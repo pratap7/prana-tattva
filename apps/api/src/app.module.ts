@@ -16,6 +16,7 @@ import { AvailabilityModule } from './modules/availability/availability.module';
 import { SearchModule } from './modules/search/search.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { SessionsModule } from './modules/sessions/sessions.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
@@ -36,6 +37,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     SearchModule,
     BookingsModule,
     PaymentsModule,
+    SessionsModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -114,6 +114,13 @@ export interface BookingSummaryResponse {
     displayName: string;
     email: string;
   };
+  locationDetails?: {
+    address: string;
+    city: string;
+    instructions: string | null;
+    coordinates: { lat: number; lng: number } | null;
+    isMasked: boolean;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

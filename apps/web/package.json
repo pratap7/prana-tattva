@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@daily-co/daily-js": "^0.93.0",
     "@project-nirvana/shared": "workspace:*",
     "@radix-ui/react-slot": "^1.1.2",
     "class-variance-authority": "^0.7.1",

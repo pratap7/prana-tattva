@@ -9,6 +9,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import * as crypto from 'crypto';
 import { DateTime } from 'luxon';
 import {
   prisma,
@@ -433,12 +434,13 @@ export class BookingsService {
         },
       });
 
-      // Initialize session record with Daily.co video room name
+      // Initialize session record with Daily.co video room name (derived from random ID, NOT booking ID)
+      const randomRoomName = `nirvana-${crypto.randomBytes(8).toString('hex')}`;
       await tx.session.upsert({
         where: { bookingId: booking.id },
         create: {
           bookingId: booking.id,
-          videoRoomName: `nirvana-session-${booking.id.slice(0, 8)}`,
+          videoRoomName: randomRoomName,
         },
         update: {},
       });
@@ -1267,6 +1269,29 @@ export class BookingsService {
             email: b.consumer.email || '',
           }
         : undefined,
+      locationDetails:
+        (b.service?.mode || 'ONLINE') === 'IN_PERSON'
+          ? (() => {
+              const svc = b.service as
+                | {
+                    locationAddress?: string | null;
+                    locationCity?: string | null;
+                    locationInstructions?: string | null;
+                    locationCoordinates?: { lat: number; lng: number } | null;
+                  }
+                | undefined;
+              const isUnlocked = b.status === 'CONFIRMED' || b.status === 'COMPLETED';
+              return {
+                address: isUnlocked
+                  ? svc?.locationAddress || 'Sanctuary Address Provided'
+                  : 'Exact address unlocked upon booking confirmation',
+                city: svc?.locationCity || providerProfile?.city || 'Rishikesh',
+                instructions: isUnlocked ? svc?.locationInstructions || null : null,
+                coordinates: isUnlocked ? svc?.locationCoordinates || null : null,
+                isMasked: !isUnlocked,
+              };
+            })()
+          : null,
       createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : b.createdAt,
       updatedAt: b.updatedAt instanceof Date ? b.updatedAt.toISOString() : b.updatedAt,
     };

@@ -23,6 +23,9 @@ export const EnvSchema = z.object({
   RAZORPAY_KEY_SECRET: z.string().default('rzp_test_secretKey'),
   RAZORPAY_WEBHOOK_SECRET: z.string().default('rzp_webhook_secret_default'),
   HOLD_PERIOD_HOURS: z.coerce.number().default(24),
+  DAILY_API_KEY: z.string().default('mock_daily_api_key'),
+  DAILY_DOMAIN: z.string().default('pranatattva'),
+  DAILY_WEBHOOK_SECRET: z.string().default('daily_webhook_secret_default'),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;

@@ -435,20 +435,28 @@ export default function ConsumerBookingsPage() {
 
                       {booking.status === 'CONFIRMED' && (
                         <>
-                          {booking.service?.mode === 'ONLINE' && booking.session?.videoRoomUrl && (
+                          {booking.service?.mode === 'ONLINE' ? (
                             <Button
                               size="sm"
                               className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
                               asChild
                             >
-                              <a
-                                href={booking.session.videoRoomUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
+                              <Link href={`/sessions/${booking.id}`}>
                                 <Video className="h-3.5 w-3.5" />
                                 Enter Video Sanctuary
-                              </a>
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 gap-1.5"
+                              asChild
+                            >
+                              <Link href={`/sessions/${booking.id}`}>
+                                <MapPin className="h-3.5 w-3.5" />
+                                View Location Details
+                              </Link>
                             </Button>
                           )}
 

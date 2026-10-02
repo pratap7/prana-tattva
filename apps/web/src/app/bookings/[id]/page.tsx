@@ -29,6 +29,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/context/auth-context';
+import { InPersonLocationCard } from '@/components/session/in-person-location-card';
+import type { InPersonSessionDetails } from '@project-nirvana/shared';
 
 interface BookingDetail {
   id: string;
@@ -52,6 +54,7 @@ interface BookingDetail {
   notes?: string | null;
   refundAmount?: number | null;
   rescheduledCount?: number;
+  locationDetails?: InPersonSessionDetails | null;
   service?: {
     id: string;
     title: string;
@@ -333,22 +336,27 @@ export default function BookingSummaryPage() {
               </p>
             </div>
             <div className="flex flex-col gap-2 w-full sm:w-auto">
-              {displayBooking.service?.mode === 'ONLINE' &&
-                displayBooking.session?.videoRoomUrl && (
-                  <Button
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2"
-                    asChild
-                  >
-                    <a
-                      href={displayBooking.session.videoRoomUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Video className="h-4 w-4" />
-                      Enter Video Room
-                    </a>
-                  </Button>
-                )}
+              {displayBooking.service?.mode === 'ONLINE' ? (
+                <Button
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2 shadow-sm"
+                  asChild
+                >
+                  <Link href={`/sessions/${displayBooking.id}`}>
+                    <Video className="h-4 w-4" />
+                    Enter Video Sanctuary
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2 shadow-sm"
+                  asChild
+                >
+                  <Link href={`/sessions/${displayBooking.id}`}>
+                    <MapPin className="h-4 w-4" />
+                    View Sanctuary Location
+                  </Link>
+                </Button>
+              )}
               <Button variant="outline" asChild>
                 <Link href="/bookings">View in My Bookings</Link>
               </Button>
@@ -472,6 +480,15 @@ export default function BookingSummaryPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* In-Person Sanctuary Location Card */}
+          {displayBooking.service?.mode === 'IN_PERSON' && (
+            <InPersonLocationCard
+              details={displayBooking.locationDetails}
+              isConfirmed={paymentSuccess || displayBooking.status === 'CONFIRMED'}
+              serviceTitle={displayBooking.service?.title || 'Sanctuary Session'}
+            />
+          )}
 
           {/* Practitioner Profile Card */}
           <Card>
