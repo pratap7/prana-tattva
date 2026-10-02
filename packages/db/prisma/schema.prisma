@@ -135,6 +135,20 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum ReviewModerationStatus {
+  PUBLISHED
+  PENDING_MODERATION
+  FLAGGED
+  REJECTED
+}
+
+enum ReportSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 enum ConsentType {
   TERMS_OF_SERVICE
   PRIVACY_POLICY
@@ -184,9 +198,10 @@ model User {
   blocksCreated           UserBlock[]              @relation("BlocksCreated")
   blocksReceived          UserBlock[]              @relation("BlocksReceived")
   disputesRaised          Dispute[]                @relation("UserDisputes")
-  reportsFiled          Report[]         @relation("ReportsFiled")
-  reportsReceived       Report[]         @relation("ReportsReceived")
-  auditLogs             AuditLog[]
+  reportsFiled            Report[]                 @relation("ReportsFiled")
+  reportsReceived         Report[]                 @relation("ReportsReceived")
+  reviewReportsFiled      ReviewReport[]           @relation("ReviewReportsFiled")
+  auditLogs               AuditLog[]
   consentRecords        ConsentRecord[]
 
   @@index([email])
@@ -247,11 +262,16 @@ model ProviderProfile {
   kycStatus        String?          @default("NOT_STARTED")
   bufferMinutes    Int              @default(15) // Rest buffer between sessions
   minNoticeHours   Int              @default(4) // Minimum booking notice in hours
-  completedSessions Int             @default(0) // Total completed client sessions
-  responseRate     Int              @default(100) // Practitioner response rate percentage (0-100)
-  reliabilityStrikes Int            @default(0) // Reliability strikes for provider cancellations
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  completedSessions  Int              @default(0) // Total completed client sessions
+  responseRate       Int              @default(100) // Practitioner response rate percentage (0-100)
+  reliabilityStrikes Int              @default(0) // Reliability strikes for provider cancellations
+  bayesianRating     Decimal          @default(0.0) @db.Decimal(3, 2)
+  completionRate     Decimal          @default(100.0) @db.Decimal(5, 2)
+  cancellationRate   Decimal          @default(0.0) @db.Decimal(5, 2)
+  avgResponseMinutes Int              @default(30)
+  reliabilityBadges  String[]         @default([])
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   services               Service[]
   credentials            Credential[]
@@ -264,6 +284,7 @@ model ProviderProfile {
   @@index([verificationTier, approvalStatus])
   @@index([city, country])
   @@index([ratingAvg(sort: Desc)])
+  @@index([bayesianRating(sort: Desc)])
   @@map("provider_profiles")
 }
 
@@ -469,23 +490,54 @@ model Session {
 }
 
 model Review {
-  id            String   @id @default(uuid())
-  bookingId     String   @unique
-  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  consumerId    String
-  consumer      User     @relation("ConsumerReviews", fields: [consumerId], references: [id], onDelete: Restrict)
-  providerId    String
-  provider      User     @relation("ProviderReviews", fields: [providerId], references: [id], onDelete: Restrict)
-  rating        Int // 1 to 5
-  comment       String?  @db.Text
-  providerReply String?  @db.Text
-  isPublished   Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String                 @id @default(uuid())
+  bookingId         String                 @unique
+  booking           Booking                @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  consumerId        String
+  consumer          User                   @relation("ConsumerReviews", fields: [consumerId], references: [id], onDelete: Restrict)
+  providerId        String
+  provider          User                   @relation("ProviderReviews", fields: [providerId], references: [id], onDelete: Restrict)
+  rating            Int // 1 to 5
+  comment           String?                @db.Text
+  tags              String[]               @default([])
+  providerReply     String?                @db.Text
+  providerRepliedAt DateTime?
+  isPublished       Boolean                @default(true)
+  moderationStatus  ReviewModerationStatus @default(PUBLISHED)
+  isFlagged         Boolean                @default(false)
+  flagReasons       String[]               @default([])
+  clientIp          String?
+  deviceHash        String?
+  editedAt          DateTime?
+  replyEditedAt     DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  reports           ReviewReport[]
 
   @@index([providerId, isPublished, rating])
   @@index([consumerId])
+  @@index([moderationStatus])
   @@map("reviews")
+}
+
+model ReviewReport {
+  id         String       @id @default(uuid())
+  reviewId   String
+  review     Review       @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporterId String
+  reporter   User         @relation("ReviewReportsFiled", fields: [reporterId], references: [id], onDelete: Restrict)
+  reason     String
+  details    String?      @db.Text
+  status     ReportStatus @default(PENDING)
+  adminNotes String?      @db.Text
+  resolvedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([reviewId, status])
+  @@index([reporterId])
+  @@map("review_reports")
 }
 
 // ============================================================================
@@ -739,18 +791,22 @@ model Dispute {
 }
 
 model Report {
-  id             String       @id @default(uuid())
+  id             String         @id @default(uuid())
   reporterId     String
-  reporter       User         @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Restrict)
+  reporter       User           @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Restrict)
   reportedUserId String
-  reportedUser   User         @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Restrict)
+  reportedUser   User           @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Restrict)
   bookingId      String?
-  booking        Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  category       String // HARASSMENT, UNPROFESSIONAL, FRAUD, NO_SHOW
-  reason         String       @db.Text
-  status         ReportStatus @default(PENDING)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  booking        Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  category       String // MISCONDUCT, MEDICAL_CLAIMS, SCAM, HARASSMENT, OTHER
+  reason         String         @db.Text
+  severity       ReportSeverity @default(MEDIUM)
+  autoSuspended  Boolean        @default(false)
+  status         ReportStatus   @default(PENDING)
+  adminNotes     String?        @db.Text
+  actionTaken    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@index([status, createdAt])
   @@index([reportedUserId])

@@ -34,6 +34,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SlotPicker } from '@/components/consumer/slot-picker';
+import { ProviderReviewsList } from '@/components/reviews/provider-reviews-list';
 import { AvailableSlot } from '@project-nirvana/shared';
 
 export interface PublicProfileData {
@@ -457,61 +458,9 @@ export function PublicProfileView({ data }: { data: PublicProfileData }) {
               )}
             </div>
 
-            {/* Client Reviews & Testimonials Section */}
-            <div className="space-y-6 pt-6 border-t border-border/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-serif font-semibold text-foreground flex items-center gap-2">
-                    <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
-                    Verified Client Experiences
-                  </h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                    Authentic feedback from seekers who completed live sessions with{' '}
-                    {profile.displayName}.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Card className="p-5 bg-card/60 border border-border/60 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-amber-500">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-3.5 w-3.5 fill-current" />
-                      ))}
-                    </div>
-                    <span className="text-xs text-muted-foreground">2 weeks ago</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-foreground/90 italic leading-relaxed">
-                    &quot;The energy healing session was extraordinarily grounding.{' '}
-                    {profile.displayName} created such a peaceful, held space where I could deeply
-                    release tension.&quot;
-                  </p>
-                  <div className="flex items-center gap-2 pt-1 border-t border-border/40 text-xs text-muted-foreground">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Verified Session Attendee</span>
-                  </div>
-                </Card>
-
-                <Card className="p-5 bg-card/60 border border-border/60 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-amber-500">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-3.5 w-3.5 fill-current" />
-                      ))}
-                    </div>
-                    <span className="text-xs text-muted-foreground">1 month ago</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-foreground/90 italic leading-relaxed">
-                    &quot;Clear, empathetic, and truly insightful. The session helped clarify what I
-                    had been struggling with for months. Highly recommended.&quot;
-                  </p>
-                  <div className="flex items-center gap-2 pt-1 border-t border-border/40 text-xs text-muted-foreground">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Verified Session Attendee</span>
-                  </div>
-                </Card>
-              </div>
+            {/* Reviews & Trust Layer Section */}
+            <div className="pt-6 border-t border-border/50">
+              <ProviderReviewsList providerId={profile.id} providerName={profile.displayName} />
             </div>
           </div>
 

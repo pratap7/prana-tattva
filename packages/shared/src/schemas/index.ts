@@ -10,3 +10,4 @@ export * from './payment.schema.js';
 export * from './session.schema.js';
 export * from './messaging.schema.js';
 export * from './notification.schema.js';
+export * from './review.schema.js';

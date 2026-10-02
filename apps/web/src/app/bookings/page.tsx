@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api-client';
+import { ReviewModal } from '@/components/reviews/review-modal';
 
 interface ConsumerBooking {
   id: string;
@@ -87,6 +88,8 @@ export default function ConsumerBookingsPage() {
   const [cancelTargetBooking, setCancelTargetBooking] = useState<ConsumerBooking | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+  const [reviewBooking, setReviewBooking] = useState<ConsumerBooking | null>(null);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -491,6 +494,18 @@ export default function ConsumerBookingsPage() {
                         </>
                       )}
 
+                      {booking.status === 'COMPLETED' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setReviewBooking(booking)}
+                          className="border-primary/40 text-primary hover:bg-primary/10 gap-1.5 text-xs"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Session Reflection & Review
+                        </Button>
+                      )}
+
                       <Button size="sm" variant="ghost" className="text-xs" asChild>
                         <Link href={`/bookings/${booking.id}`}>View Receipt & Details</Link>
                       </Button>
@@ -654,6 +669,19 @@ export default function ConsumerBookingsPage() {
             </form>
           </Card>
         </div>
+      )}
+
+      {reviewBooking && (
+        <ReviewModal
+          bookingId={reviewBooking.id}
+          providerName={reviewBooking.provider?.displayName || 'Practitioner'}
+          isOpen={!!reviewBooking}
+          onClose={() => setReviewBooking(null)}
+          onReviewSubmitted={() => {
+            setReviewBooking(null);
+            fetchBookings();
+          }}
+        />
       )}
     </div>
   );

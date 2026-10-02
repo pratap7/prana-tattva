@@ -16,6 +16,8 @@ import {
   Info,
   Timer,
   RefreshCw,
+  Star,
+  Sparkles,
 } from 'lucide-react';
 import {
   Card,
@@ -30,7 +32,8 @@ import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/context/auth-context';
 import { InPersonLocationCard } from '@/components/session/in-person-location-card';
-import type { InPersonSessionDetails } from '@project-nirvana/shared';
+import { ReviewModal } from '@/components/reviews/review-modal';
+import type { InPersonSessionDetails, ReviewEligibility } from '@project-nirvana/shared';
 
 interface BookingDetail {
   id: string;
@@ -82,6 +85,15 @@ interface BookingDetail {
     videoRoomUrl?: string | null;
     status: string;
   } | null;
+  review?: {
+    id: string;
+    rating: number;
+    comment?: string | null;
+    tags: string[];
+    providerReply?: string | null;
+    providerRepliedAt?: string | null;
+    createdAt: string;
+  } | null;
 }
 
 export default function BookingSummaryPage() {
@@ -98,6 +110,18 @@ export default function BookingSummaryPage() {
   const [secondsLeft, setSecondsLeft] = useState<number>(600);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [eligibility, setEligibility] = useState<ReviewEligibility | null>(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  const checkEligibility = useCallback(async () => {
+    if (!bookingId) return;
+    try {
+      const data = await apiFetch<ReviewEligibility>(`/reviews/eligibility/${bookingId}`);
+      setEligibility(data);
+    } catch {
+      // ignore
+    }
+  }, [bookingId]);
 
   // Fetch booking details
   const fetchBooking = useCallback(async () => {
@@ -118,6 +142,9 @@ export default function BookingSummaryPage() {
       if (data.status === 'CONFIRMED') {
         setPaymentSuccess(true);
       }
+      if (data.status === 'COMPLETED') {
+        checkEligibility();
+      }
     } catch (err: unknown) {
       // Provide high-fidelity preview if testing offline
       const errorMessage = err instanceof Error ? err.message : 'Failed to load booking summary';
@@ -125,7 +152,7 @@ export default function BookingSummaryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [bookingId]);
+  }, [bookingId, checkEligibility]);
 
   useEffect(() => {
     fetchBooking();
@@ -485,9 +512,106 @@ export default function BookingSummaryPage() {
           {displayBooking.service?.mode === 'IN_PERSON' && (
             <InPersonLocationCard
               details={displayBooking.locationDetails}
-              isConfirmed={paymentSuccess || displayBooking.status === 'CONFIRMED'}
+              isConfirmed={
+                displayBooking.status === 'CONFIRMED' || displayBooking.status === 'COMPLETED'
+              }
               serviceTitle={displayBooking.service?.title || 'Sanctuary Session'}
             />
+          )}
+
+          {/* Sacred Reflection Card (COMPLETED Bookings) */}
+          {displayBooking.status === 'COMPLETED' && (
+            <Card className="border border-primary/30 bg-primary/5 p-6 rounded-2xl space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-primary font-medium text-xs">
+                    <Sparkles className="h-4 w-4" />
+                    <span>Sacred Reflection & Trust</span>
+                  </div>
+                  <h3 className="font-serif text-lg font-medium text-foreground">
+                    {displayBooking.review
+                      ? 'Your Session Reflection'
+                      : `Share Your Experience with ${displayBooking.provider?.displayName || 'Practitioner'}`}
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed max-w-lg">
+                    {displayBooking.review
+                      ? 'Your authentic feedback honours the healing space and guides fellow seekers.'
+                      : eligibility?.isEligible
+                        ? `Your session concluded successfully. You have ${eligibility.daysRemaining ?? 14} days remaining to submit your reflection.`
+                        : 'Review window for this session has closed.'}
+                  </p>
+                </div>
+
+                {!displayBooking.review && eligibility?.isEligible && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsReviewModalOpen(true)}
+                    className="shrink-0 gap-1.5"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Leave Review
+                  </Button>
+                )}
+              </div>
+
+              {/* If existing review is present */}
+              {displayBooking.review && (
+                <div className="p-4 rounded-xl bg-card border border-border/70 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-amber-400">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          className={`h-4 w-4 ${
+                            s <= (displayBooking.review?.rating || 5)
+                              ? 'fill-amber-400'
+                              : 'fill-none text-muted-foreground/30'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(displayBooking.review.createdAt).toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+
+                  {displayBooking.review.tags && displayBooking.review.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {displayBooking.review.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="px-2 py-0.5 rounded-md text-[10px] bg-muted/60 text-muted-foreground font-medium capitalize"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {displayBooking.review.comment && (
+                    <p className="text-xs text-foreground/90 leading-relaxed italic">
+                      &ldquo;{displayBooking.review.comment}&rdquo;
+                    </p>
+                  )}
+
+                  {/* Provider reply if any */}
+                  {displayBooking.review.providerReply && (
+                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/15 text-xs space-y-1">
+                      <p className="font-semibold text-foreground">
+                        {displayBooking.provider?.displayName} responded:
+                      </p>
+                      <p className="text-muted-foreground italic">
+                        &ldquo;{displayBooking.review.providerReply}&rdquo;
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
           )}
 
           {/* Practitioner Profile Card */}
@@ -673,6 +797,20 @@ export default function BookingSummaryPage() {
           </Card>
         </div>
       </div>
+
+      {isReviewModalOpen && (
+        <ReviewModal
+          bookingId={displayBooking.id}
+          providerName={displayBooking.provider?.displayName || 'Practitioner'}
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          onReviewSubmitted={() => {
+            setIsReviewModalOpen(false);
+            fetchBooking();
+            checkEligibility();
+          }}
+        />
+      )}
     </div>
   );
 }
