@@ -488,12 +488,26 @@ model Payment {
   currency         String         @default("INR")
   status           PaymentStatus  @default(PENDING)
   refundedAmount   Int            @default(0) // In paise
+  taxBreakdown     Json?
+  metadata         Json?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   @@index([bookingId])
   @@index([status])
   @@map("payments")
+}
+
+model ProcessedWebhookEvent {
+  id          String         @id @default(uuid())
+  gateway     PaymentGateway @default(RAZORPAY)
+  eventId     String         @unique
+  eventType   String
+  payload     Json?
+  processedAt DateTime       @default(now())
+
+  @@index([gateway, eventId])
+  @@map("processed_webhook_events")
 }
 
 model Payout {

@@ -21,6 +21,8 @@ export const EnvSchema = z.object({
   S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
   RAZORPAY_KEY_ID: z.string().default('rzp_test_exampleKey'),
   RAZORPAY_KEY_SECRET: z.string().default('rzp_test_secretKey'),
+  RAZORPAY_WEBHOOK_SECRET: z.string().default('rzp_webhook_secret_default'),
+  HOLD_PERIOD_HOURS: z.coerce.number().default(24),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;

@@ -13,6 +13,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
+    rawBody: true,
   });
 
   // Attach cookie parser for refresh tokens

@@ -37,8 +37,9 @@ export class JwtAuthGuard implements CanActivate {
         secret: env.JWT_SECRET,
       });
 
-      (request as unknown as { user: AuthenticatedUser }).user = {
+      (request as unknown as { user: AuthenticatedUser & { userId: string } }).user = {
         id: payload.sub,
+        userId: payload.sub,
         email: payload.email,
         role: payload.role,
         timeZone: payload.timeZone,
