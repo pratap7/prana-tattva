@@ -1,0 +1,13 @@
+{
+  "name": "@project-nirvana/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "eslint-preset.js",
+  "files": [
+    "eslint-preset.js",
+    "tsconfig.base.json"
+  ],
+  "dependencies": {
+    "eslint-config-prettier": "^9.1.0"
+  }
+}

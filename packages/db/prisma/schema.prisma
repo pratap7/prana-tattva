@@ -1,0 +1,161 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CONSUMER
+  PROVIDER
+  ADMIN
+}
+
+enum ServiceCategory {
+  YOGA
+  REIKI_HEALING
+  PSYCHOTHERAPY
+  PRANIC_HEALING
+  ASTROLOGY
+  SPIRITUALITY
+  SOUND_HEALING
+  MEDITATION
+  LIFE_COACHING
+}
+
+enum SessionFormat {
+  VIDEO
+  IN_PERSON
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id               String           @id @default(uuid())
+  email            String           @unique
+  name             String
+  role             UserRole         @default(CONSUMER)
+  timeZone         String           @default("Asia/Kolkata")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  providerProfile  ProviderProfile?
+  consumerBookings Booking[]        @relation("ConsumerBookings")
+  providerBookings Booking[]        @relation("ProviderBookings")
+  reviewsGiven     Review[]         @relation("ConsumerReviews")
+  reviewsReceived  Review[]         @relation("ProviderReviews")
+
+  @@map("users")
+}
+
+model ProviderProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline          String
+  bio               String
+  isVerified        Boolean  @default(false)
+  commissionPercent Int      @default(15) // Configurable platform commission
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  services          Service[]
+
+  @@map("provider_profiles")
+}
+
+model Service {
+  id              String          @id @default(uuid())
+  providerId      String
+  provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  category        ServiceCategory
+  format          SessionFormat   @default(VIDEO)
+  durationMinutes Int             @default(60)
+  priceInPaise    Int // Money stored in smallest unit (paise)
+  currency        String          @default("INR")
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  bookings        Booking[]
+
+  @@map("services")
+}
+
+model Booking {
+  id                    String        @id @default(uuid())
+  consumerId            String
+  consumer              User          @relation("ConsumerBookings", fields: [consumerId], references: [id])
+  providerId            String
+  provider              User          @relation("ProviderBookings", fields: [providerId], references: [id])
+  serviceId             String
+  service               Service       @relation(fields: [serviceId], references: [id])
+  scheduledStartTime    DateTime // Always stored in UTC
+  scheduledEndTime      DateTime // Always stored in UTC
+  status                BookingStatus @default(PENDING_PAYMENT)
+  
+  // Financial breakdown in smallest currency unit (paise)
+  totalPriceInPaise     Int
+  platformFeeInPaise    Int
+  providerPayoutInPaise Int
+  currency              String        @default("INR")
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  payments              Payment[]
+  review                Review?
+
+  @@index([consumerId])
+  @@index([providerId])
+  @@index([scheduledStartTime])
+  @@map("bookings")
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  bookingId         String
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amountInPaise     Int
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  razorpayOrderId   String?       @unique
+  razorpayPaymentId String?       @unique
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  bookingId   String   @unique
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  consumerId  String
+  consumer    User     @relation("ConsumerReviews", fields: [consumerId], references: [id])
+  providerId  String
+  provider    User     @relation("ProviderReviews", fields: [providerId], references: [id])
+  rating      Int // 1 to 5
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@map("reviews")
+}

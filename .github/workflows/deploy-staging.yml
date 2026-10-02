@@ -1,0 +1,41 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    name: Build & Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.5.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Staging Migration
+        run: |
+          echo "Stub: pnpm --filter @project-nirvana/db db:migrate:deploy"
+
+      - name: Build Application Artifacts
+        run: pnpm run build
+
+      - name: Deploy API & Web Staging Containers
+        run: |
+          echo "Stub: Deploying container artifacts to Staging cluster"

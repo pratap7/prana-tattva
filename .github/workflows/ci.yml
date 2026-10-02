@@ -1,0 +1,48 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Lint, Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.5.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @project-nirvana/db db:generate
+
+      - name: Run Linters
+        run: pnpm run lint
+
+      - name: Run Type Checking
+        run: pnpm run typecheck
+
+      - name: Run Tests
+        run: pnpm run test
+
+      - name: Run Production Build
+        run: pnpm run build
+        env:
+          DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/nirvana_dev?schema=public'
+          JWT_SECRET: 'ci-secret-for-build-purposes-min32chars'

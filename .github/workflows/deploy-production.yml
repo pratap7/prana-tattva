@@ -1,0 +1,42 @@
+name: Deploy Production
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  deploy-production:
+    name: Build & Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.5.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Schema Status
+        run: |
+          echo "Stub: pnpm --filter @project-nirvana/db db:migrate:deploy"
+
+      - name: Build Application Artifacts
+        run: pnpm run build
+
+      - name: Deploy Production Containers
+        run: |
+          echo "Stub: Rolling out zero-downtime deployment to Production ECS/K8s"
