@@ -26,6 +26,10 @@ export const EnvSchema = z.object({
   DAILY_API_KEY: z.string().default('mock_daily_api_key'),
   DAILY_DOMAIN: z.string().default('pranatattva'),
   DAILY_WEBHOOK_SECRET: z.string().default('daily_webhook_secret_default'),
+  MESSAGE_ENCRYPTION_KEY: z
+    .string()
+    .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+  MESSAGE_ENCRYPTION_KEY_V2: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;

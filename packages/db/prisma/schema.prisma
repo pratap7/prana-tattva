@@ -175,11 +175,15 @@ model User {
   providerBookings      Booking[]        @relation("ProviderBookings")
   reviewsGiven          Review[]         @relation("ConsumerReviews")
   reviewsReceived       Review[]         @relation("ProviderReviews")
-  consumerConversations Conversation[]   @relation("ConsumerConversations")
-  providerConversations Conversation[]   @relation("ProviderConversations")
-  messagesSent          Message[]        @relation("UserMessages")
-  notifications         Notification[]
-  disputesRaised        Dispute[]        @relation("UserDisputes")
+  consumerConversations   Conversation[]           @relation("ConsumerConversations")
+  providerConversations   Conversation[]           @relation("ProviderConversations")
+  messagesSent            Message[]                @relation("UserMessages")
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
+  pushSubscriptions       PushSubscription[]
+  blocksCreated           UserBlock[]              @relation("BlocksCreated")
+  blocksReceived          UserBlock[]              @relation("BlocksReceived")
+  disputesRaised          Dispute[]                @relation("UserDisputes")
   reportsFiled          Report[]         @relation("ReportsFiled")
   reportsReceived       Report[]         @relation("ReportsReceived")
   auditLogs             AuditLog[]
@@ -428,12 +432,13 @@ model Booking {
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
-  payments      Payment[]
-  session       Session?
-  review        Review?
-  dispute       Dispute?
-  ledgerEntries LedgerEntry[]
-  reports       Report[]
+  payments           Payment[]
+  session            Session?
+  review             Review?
+  dispute            Dispute?
+  ledgerEntries      LedgerEntry[]
+  reports            Report[]
+  scheduledReminders ScheduledReminder[]
 
   @@index([providerId, startAt])
   @@index([consumerId, startAt])
@@ -564,39 +569,72 @@ model LedgerEntry {
 // ============================================================================
 
 model Conversation {
-  id         String   @id @default(uuid())
-  bookingId  String?
-  consumerId String
-  consumer   User     @relation("ConsumerConversations", fields: [consumerId], references: [id], onDelete: Cascade)
-  providerId String
-  provider   User     @relation("ProviderConversations", fields: [providerId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                    String    @id @default(uuid())
+  consumerId            String
+  consumer              User      @relation("ConsumerConversations", fields: [consumerId], references: [id], onDelete: Cascade)
+  providerId            String
+  provider              User      @relation("ProviderConversations", fields: [providerId], references: [id], onDelete: Cascade)
+  bookingId             String?
+  isUnlocked            Boolean   @default(false)
+  preBookingMessageCount Int      @default(0)
+  lastMessageAt         DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   messages Message[]
 
-  @@unique([consumerId, providerId, bookingId])
+  @@unique([consumerId, providerId])
   @@index([consumerId])
   @@index([providerId])
+  @@index([lastMessageAt])
   @@map("conversations")
 }
 
 model Message {
-  id             String       @id @default(uuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId       String
-  sender         User         @relation("UserMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  ciphertext     String       @db.Text // Encrypted message payload at rest
-  iv             String // Initialization vector for AES-256-GCM
-  authTag        String? // Auth tag for AES-256-GCM verification
-  isEncrypted    Boolean      @default(true)
-  readAt         DateTime?
-  createdAt      DateTime     @default(now())
+  id                   String       @id @default(uuid())
+  conversationId       String
+  conversation         Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId             String
+  sender               User         @relation("UserMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  ciphertext           String       @db.Text // Encrypted message payload at rest
+  iv                   String // Initialization vector for AES-256-GCM
+  authTag              String? // Auth tag for AES-256-GCM verification
+  keyVersion           Int          @default(1) // Application-level key rotation
+  isEncrypted          Boolean      @default(true)
+  readAt               DateTime?
+  
+  // Attachments
+  attachmentUrl        String?
+  attachmentType       String?
+  attachmentSize       Int?
+  
+  // Anti-leakage detection flags & moderation
+  hasLeakageWarning    Boolean      @default(false)
+  leakageFlags         Json? // Array of detected tags: ["PHONE", "EMAIL", "OFF_PLATFORM_KEYWORD"]
+  flaggedForModeration Boolean      @default(false)
+  moderationReason     String?
+  
+  createdAt            DateTime     @default(now())
 
   @@index([conversationId, createdAt])
   @@index([senderId])
+  @@index([flaggedForModeration])
   @@map("messages")
+}
+
+model UserBlock {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("BlocksCreated", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
 }
 
 model Notification {
@@ -612,6 +650,74 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@map("notifications")
+}
+
+model NotificationPreference {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // e.g. BOOKING_CONFIRMED, SESSION_REMINDER_24H, SESSION_REMINDER_1H, REVIEW_REQUEST, CHAT_MESSAGE, PAYMENT_PROCESSED, VERIFICATION_UPDATE
+  inApp     Boolean  @default(true)
+  email     Boolean  @default(true)
+  sms       Boolean  @default(false) // SMS critical only
+  push      Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+model NotificationDeliveryLog {
+  id             String    @id @default(uuid())
+  notificationId String?
+  userId         String
+  channel        String // IN_APP, EMAIL, SMS, PUSH
+  type           String // NotificationType
+  recipient      String // email, phone, push token, or userId
+  status         String // DELIVERED, SKIPPED_PREFERENCE, FAILED, RETRYING, DEAD_LETTER
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
+  error          String?   @db.Text
+  payload        Json?
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("notification_delivery_logs")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model ScheduledReminder {
+  id        String   @id @default(uuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  jobId     String   @unique // BullMQ delayed job ID
+  type      String // SESSION_REMINDER_24H, SESSION_REMINDER_1H, REVIEW_REQUEST
+  triggerAt DateTime
+  status    String   @default("SCHEDULED") // SCHEDULED, EXECUTED, CANCELLED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([status, triggerAt])
+  @@map("scheduled_reminders")
 }
 
 model Dispute {

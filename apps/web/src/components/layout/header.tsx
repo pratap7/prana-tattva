@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { ThemeToggle } from './theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
+import { Sparkles, LogOut, LayoutDashboard, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { NotificationBell } from '@/components/navigation/notification-bell';
 
 export function Header() {
   const { user, isAuthenticated, logout, isLoading } = useAuth();
@@ -55,6 +56,11 @@ export function Header() {
               My Bookings
             </Link>
           ) : null}
+          {isAuthenticated ? (
+            <Link href="/messages" className="transition-colors hover:text-foreground">
+              Messages
+            </Link>
+          ) : null}
           <Link href="/how-it-works" className="transition-colors hover:text-foreground">
             How It Works
           </Link>
@@ -64,7 +70,19 @@ export function Header() {
           <ThemeToggle />
 
           {!isLoading && isAuthenticated && user ? (
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground hover:text-foreground relative"
+                asChild
+                title="Messages"
+              >
+                <Link href="/messages">
+                  <MessageSquare className="h-4 w-4" />
+                </Link>
+              </Button>
+              <NotificationBell />
               <Link href={getDashboardHref()} className="flex items-center space-x-2 text-sm">
                 <Badge
                   variant={

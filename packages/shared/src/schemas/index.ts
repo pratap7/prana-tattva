@@ -8,3 +8,5 @@ export * from './search.schema.js';
 export * from './booking.schema.js';
 export * from './payment.schema.js';
 export * from './session.schema.js';
+export * from './messaging.schema.js';
+export * from './notification.schema.js';
