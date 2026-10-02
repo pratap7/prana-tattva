@@ -226,6 +226,7 @@ model ProviderProfile {
   slug             String           @unique
   headline         String
   bio              String           @db.Text
+  avatarUrl        String?
   introVideoUrl    String?
   languages        String[]         @default(["en"])
   yearsExperience  Int              @default(0)
@@ -233,10 +234,14 @@ model ProviderProfile {
   city             String
   verificationTier VerificationTier @default(UNVERIFIED)
   approvalStatus   ApprovalStatus   @default(DRAFT)
+  rejectionReason  String?          @db.Text
+  onboardingStep   Int              @default(1)
   ratingAvg        Decimal          @default(0.0) @db.Decimal(3, 2)
   ratingCount      Int              @default(0)
   payoutAccountId  String? // Razorpay Route linked account ID
+  kycStatus        String?          @default("NOT_STARTED")
   bufferMinutes    Int              @default(15) // Rest buffer between sessions
+  minNoticeHours   Int              @default(4) // Minimum booking notice in hours
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

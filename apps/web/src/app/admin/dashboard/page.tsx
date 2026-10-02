@@ -90,6 +90,30 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Action Banner */}
+      <Card className="border border-primary/20 bg-gradient-to-r from-primary/5 via-background to-emerald-500/5 p-6 rounded-2xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="font-serif text-xl font-semibold text-foreground flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Practitioner Verification Queue
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Review submitted practitioner dossiers, inspect uploaded certificates, verify
+              licenses, and approve public sanctuary profiles.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <a
+              href="/admin/verification"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-5 py-2.5 rounded-xl shadow-sm transition-all"
+            >
+              Open Verification Queue &rarr;
+            </a>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

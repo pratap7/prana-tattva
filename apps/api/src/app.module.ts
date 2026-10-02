@@ -5,9 +5,30 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { PayoutModule } from './modules/payout/payout.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { VerificationModule } from './modules/verification/verification.module';
+import { ProvidersModule } from './modules/providers/providers.module';
+import { ServicesModule } from './modules/services/services.module';
+import { AvailabilityModule } from './modules/availability/availability.module';
 
 @Module({
-  imports: [LoggerModule.forRoot(getPinoLoggerConfig()), HealthModule, AuditModule, AuthModule],
+  imports: [
+    LoggerModule.forRoot(getPinoLoggerConfig()),
+    HealthModule,
+    AuditModule,
+    AuthModule,
+    NotificationModule,
+    StorageModule,
+    PayoutModule,
+    OnboardingModule,
+    VerificationModule,
+    ProvidersModule,
+    ServicesModule,
+    AvailabilityModule,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

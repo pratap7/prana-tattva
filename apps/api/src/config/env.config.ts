@@ -13,6 +13,14 @@ export const EnvSchema = z.object({
   REDIS_URL: z.string().default('redis://localhost:6379'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   JWT_SECRET: z.string().default('development-jwt-secret-replace-in-production-min32chars'),
+  S3_ENDPOINT: z.string().default('http://localhost:9000'),
+  S3_REGION: z.string().default('us-east-1'),
+  S3_ACCESS_KEY_ID: z.string().default('minioadmin'),
+  S3_SECRET_ACCESS_KEY: z.string().default('minioadmin'),
+  S3_BUCKET_NAME: z.string().default('nirvana-uploads'),
+  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
+  RAZORPAY_KEY_ID: z.string().default('rzp_test_exampleKey'),
+  RAZORPAY_KEY_SECRET: z.string().default('rzp_test_secretKey'),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;
