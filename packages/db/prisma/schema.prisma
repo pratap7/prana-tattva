@@ -7,35 +7,88 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ============================================================================
+// ENUMS
+// ============================================================================
+
 enum UserRole {
   CONSUMER
   PROVIDER
   ADMIN
 }
 
-enum ServiceCategory {
-  YOGA
-  REIKI_HEALING
-  PSYCHOTHERAPY
-  PRANIC_HEALING
-  ASTROLOGY
-  SPIRITUALITY
-  SOUND_HEALING
-  MEDITATION
-  LIFE_COACHING
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
 }
 
-enum SessionFormat {
-  VIDEO
+enum VerificationTier {
+  UNVERIFIED
+  ID_VERIFIED
+  CREDENTIAL_VERIFIED
+  BACKGROUND_CHECKED
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum CredentialType {
+  DEGREE
+  CERTIFICATION
+  LICENSE
+  ACCREDITATION
+  IDENTITY_DOCUMENT
+}
+
+enum CredentialStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ServiceMode {
+  ONLINE
   IN_PERSON
+  BOTH
+}
+
+enum CancellationPolicy {
+  FLEXIBLE
+  MODERATE
+  STRICT
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
 }
 
 enum BookingStatus {
   PENDING_PAYMENT
   CONFIRMED
   COMPLETED
-  CANCELLED
+  CANCELLED_BY_CONSUMER
+  CANCELLED_BY_PROVIDER
+  NO_SHOW_CONSUMER
+  NO_SHOW_PROVIDER
+  DISPUTED
   REFUNDED
+}
+
+enum PaymentGateway {
+  RAZORPAY
+  STRIPE
 }
 
 enum PaymentStatus {
@@ -46,116 +99,514 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum LedgerEntryType {
+  CREDIT
+  DEBIT
+}
+
+enum LedgerAccountType {
+  CONSUMER_PAYMENT
+  PLATFORM_ESCROW
+  PLATFORM_REVENUE
+  PROVIDER_PAYABLE
+  GATEWAY_FEE
+  REFUND_ESCROW
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED_REFUND
+  RESOLVED_RELEASE
+  DISMISSED
+}
+
+enum ReportStatus {
+  PENDING
+  INVESTIGATING
+  ACTIONED
+  DISMISSED
+}
+
+enum ConsentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  DATA_PROCESSING
+  HEALTH_DATA_CONSENT
+  MARKETING
+}
+
+// ============================================================================
+// CORE IDENTITY & PROFILES
+// ============================================================================
+
 model User {
-  id               String           @id @default(uuid())
-  email            String           @unique
-  name             String
-  role             UserRole         @default(CONSUMER)
-  timeZone         String           @default("Asia/Kolkata")
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id              String     @id @default(uuid())
+  email           String     @unique
+  phone           String?
+  passwordHash    String?
+  role            UserRole   @default(CONSUMER)
+  status          UserStatus @default(ACTIVE)
+  timeZone        String     @default("Asia/Kolkata") // IANA Timezone
+  locale          String     @default("en-US")
+  emailVerifiedAt DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime? // Soft-delete support
 
-  providerProfile  ProviderProfile?
-  consumerBookings Booking[]        @relation("ConsumerBookings")
-  providerBookings Booking[]        @relation("ProviderBookings")
-  reviewsGiven     Review[]         @relation("ConsumerReviews")
-  reviewsReceived  Review[]         @relation("ProviderReviews")
+  providerProfile       ProviderProfile?
+  consumerBookings      Booking[]        @relation("ConsumerBookings")
+  providerBookings      Booking[]        @relation("ProviderBookings")
+  reviewsGiven          Review[]         @relation("ConsumerReviews")
+  reviewsReceived       Review[]         @relation("ProviderReviews")
+  consumerConversations Conversation[]   @relation("ConsumerConversations")
+  providerConversations Conversation[]   @relation("ProviderConversations")
+  messagesSent          Message[]        @relation("UserMessages")
+  notifications         Notification[]
+  disputesRaised        Dispute[]        @relation("UserDisputes")
+  reportsFiled          Report[]         @relation("ReportsFiled")
+  reportsReceived       Report[]         @relation("ReportsReceived")
+  auditLogs             AuditLog[]
+  consentRecords        ConsentRecord[]
 
+  @@index([email])
+  @@index([role, status])
+  @@index([deletedAt])
   @@map("users")
 }
 
 model ProviderProfile {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  headline          String
-  bio               String
-  isVerified        Boolean  @default(false)
-  commissionPercent Int      @default(15) // Configurable platform commission
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String           @id @default(uuid())
+  userId           String           @unique
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName      String
+  slug             String           @unique
+  headline         String
+  bio              String           @db.Text
+  introVideoUrl    String?
+  languages        String[]         @default(["en"])
+  yearsExperience  Int              @default(0)
+  country          String           @default("IN")
+  city             String
+  verificationTier VerificationTier @default(UNVERIFIED)
+  approvalStatus   ApprovalStatus   @default(DRAFT)
+  ratingAvg        Decimal          @default(0.0) @db.Decimal(3, 2)
+  ratingCount      Int              @default(0)
+  payoutAccountId  String? // Razorpay Route linked account ID
+  bufferMinutes    Int              @default(15) // Rest buffer between sessions
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  services          Service[]
+  services               Service[]
+  credentials            Credential[]
+  categories             ProviderCategory[]
+  availabilityRules      AvailabilityRule[]
+  availabilityExceptions AvailabilityException[]
+  payouts                Payout[]
 
+  @@index([slug])
+  @@index([verificationTier, approvalStatus])
+  @@index([city, country])
+  @@index([ratingAvg(sort: Desc)])
   @@map("provider_profiles")
 }
 
+// ============================================================================
+// TAXONOMY & CREDENTIALS
+// ============================================================================
+
+model Category {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  description     String?  @db.Text
+  icon            String?
+  requiresLicense Boolean  @default(false)
+  commissionBps   Int      @default(1500) // Default 15.00% platform commission
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subcategories Subcategory[]
+  providers     ProviderCategory[]
+  services      Service[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("categories")
+}
+
+model Subcategory {
+  id         String   @id @default(uuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, slug])
+  @@index([slug])
+  @@map("subcategories")
+}
+
+model ProviderCategory {
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  isPrimary  Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+
+  @@id([providerId, categoryId])
+  @@index([categoryId])
+  @@map("provider_categories")
+}
+
+model Credential {
+  id          String           @id @default(uuid())
+  providerId  String
+  provider    ProviderProfile  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  type        CredentialType
+  title       String
+  issuer      String
+  documentUrl String // Signed S3 object key
+  status      CredentialStatus @default(PENDING)
+  reviewedBy  String? // Admin user ID
+  reviewedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([providerId, status])
+  @@index([status])
+  @@map("credentials")
+}
+
+// ============================================================================
+// SERVICES & AVAILABILITY
+// ============================================================================
+
 model Service {
-  id              String          @id @default(uuid())
-  providerId      String
-  provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  title           String
-  description     String
-  category        ServiceCategory
-  format          SessionFormat   @default(VIDEO)
-  durationMinutes Int             @default(60)
-  priceInPaise    Int // Money stored in smallest unit (paise)
-  currency        String          @default("INR")
-  isActive        Boolean         @default(true)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id                 String             @id @default(uuid())
+  providerId         String
+  provider           ProviderProfile    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  categoryId         String
+  category           Category           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  title              String
+  description        String             @db.Text
+  durationMin        Int                @default(60)
+  priceAmount        Int // Smallest currency unit (paise)
+  currency           String             @default("INR")
+  mode               ServiceMode        @default(ONLINE)
+  isGroup            Boolean            @default(false)
+  maxParticipants    Int                @default(1)
+  isActive           Boolean            @default(true)
+  cancellationPolicy CancellationPolicy @default(MODERATE)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  bookings        Booking[]
+  bookings Booking[]
 
+  @@index([providerId, isActive])
+  @@index([categoryId, isActive])
+  @@index([priceAmount])
   @@map("services")
 }
 
+model AvailabilityRule {
+  id               String          @id @default(uuid())
+  providerId       String
+  provider         ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  weekday          Weekday
+  startTime        String // "09:00"
+  endTime          String // "17:00"
+  providerTimeZone String          @default("Asia/Kolkata")
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([providerId, weekday, isActive])
+  @@map("availability_rules")
+}
+
+model AvailabilityException {
+  id         String          @id @default(uuid())
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  startAt    DateTime // UTC
+  endAt      DateTime // UTC
+  isBlocked  Boolean         @default(true) // true = vacation/blocked, false = extra slot
+  reason     String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([providerId, startAt, endAt])
+  @@map("availability_exceptions")
+}
+
+// ============================================================================
+// BOOKINGS, SESSIONS & REVIEWS
+// ============================================================================
+
 model Booking {
-  id                    String        @id @default(uuid())
-  consumerId            String
-  consumer              User          @relation("ConsumerBookings", fields: [consumerId], references: [id])
-  providerId            String
-  provider              User          @relation("ProviderBookings", fields: [providerId], references: [id])
-  serviceId             String
-  service               Service       @relation(fields: [serviceId], references: [id])
-  scheduledStartTime    DateTime // Always stored in UTC
-  scheduledEndTime      DateTime // Always stored in UTC
-  status                BookingStatus @default(PENDING_PAYMENT)
-  
-  // Financial breakdown in smallest currency unit (paise)
-  totalPriceInPaise     Int
-  platformFeeInPaise    Int
-  providerPayoutInPaise Int
-  currency              String        @default("INR")
+  id                String        @id @default(uuid())
+  consumerId        String        @map("consumer_id")
+  consumer          User          @relation("ConsumerBookings", fields: [consumerId], references: [id], onDelete: Restrict)
+  providerId        String        @map("provider_id")
+  provider          User          @relation("ProviderBookings", fields: [providerId], references: [id], onDelete: Restrict)
+  serviceId         String        @map("service_id")
+  service           Service       @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  startAt           DateTime      @map("start_at") // UTC
+  endAt             DateTime      @map("end_at") // UTC
+  status            BookingStatus @default(PENDING_PAYMENT)
+  priceSnapshot     Int           @map("price_snapshot") // In paise
+  currency          String        @default("INR")
+  commissionBps     Int           @map("commission_bps") // Commission snapshot at booking time
+  notes             String?       @db.Text // Sensitive consultation notes (never logged)
+  slotLockExpiresAt DateTime?     @map("slot_lock_expires_at") // Temporary lock during checkout
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
 
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  payments      Payment[]
+  session       Session?
+  review        Review?
+  dispute       Dispute?
+  ledgerEntries LedgerEntry[]
+  reports       Report[]
 
-  payments              Payment[]
-  review                Review?
-
-  @@index([consumerId])
-  @@index([providerId])
-  @@index([scheduledStartTime])
+  @@index([providerId, startAt])
+  @@index([consumerId, startAt])
+  @@index([status, startAt])
+  @@index([slotLockExpiresAt])
   @@map("bookings")
 }
 
-model Payment {
-  id                String        @id @default(uuid())
-  bookingId         String
-  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  amountInPaise     Int
-  currency          String        @default("INR")
-  status            PaymentStatus @default(PENDING)
-  razorpayOrderId   String?       @unique
-  razorpayPaymentId String?       @unique
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+model Session {
+  id                 String    @id @default(uuid())
+  bookingId          String    @unique
+  booking            Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  videoRoomName      String // Daily.co room name
+  startedAt          DateTime? // Actual UTC session start
+  endedAt            DateTime? // Actual UTC session end
+  joinedByConsumerAt DateTime?
+  joinedByProviderAt DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  @@map("payments")
+  @@index([videoRoomName])
+  @@map("sessions")
 }
 
 model Review {
-  id          String   @id @default(uuid())
-  bookingId   String   @unique
-  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  consumerId  String
-  consumer    User     @relation("ConsumerReviews", fields: [consumerId], references: [id])
-  providerId  String
-  provider    User     @relation("ProviderReviews", fields: [providerId], references: [id])
-  rating      Int // 1 to 5
-  comment     String?
-  createdAt   DateTime @default(now())
+  id            String   @id @default(uuid())
+  bookingId     String   @unique
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  consumerId    String
+  consumer      User     @relation("ConsumerReviews", fields: [consumerId], references: [id], onDelete: Restrict)
+  providerId    String
+  provider      User     @relation("ProviderReviews", fields: [providerId], references: [id], onDelete: Restrict)
+  rating        Int // 1 to 5
+  comment       String?  @db.Text
+  providerReply String?  @db.Text
+  isPublished   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
+  @@index([providerId, isPublished, rating])
+  @@index([consumerId])
   @@map("reviews")
+}
+
+// ============================================================================
+// PAYMENTS, PAYOUTS & FINANCIAL LEDGER
+// ============================================================================
+
+model Payment {
+  id               String         @id @default(uuid())
+  bookingId        String
+  booking          Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  gateway          PaymentGateway @default(RAZORPAY)
+  gatewayOrderId   String?        @unique
+  gatewayPaymentId String?        @unique
+  amount           Int // In paise
+  currency         String         @default("INR")
+  status           PaymentStatus  @default(PENDING)
+  refundedAmount   Int            @default(0) // In paise
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Payout {
+  id                String          @id @default(uuid())
+  providerId        String
+  provider          ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  amount            Int // In paise
+  currency          String          @default("INR")
+  status            PayoutStatus    @default(PENDING)
+  gatewayTransferId String?         @unique // Razorpay Transfer ID
+  scheduledFor      DateTime // UTC
+  processedAt       DateTime? // UTC
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  ledgerEntries LedgerEntry[]
+
+  @@index([providerId, status])
+  @@index([scheduledFor, status])
+  @@map("payouts")
+}
+
+model LedgerEntry {
+  id          String            @id @default(uuid())
+  bookingId   String?
+  booking     Booking?          @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  payoutId    String?
+  payout      Payout?           @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  entryType   LedgerEntryType
+  accountType LedgerAccountType
+  amount      Int // In paise (positive magnitude)
+  currency    String            @default("INR")
+  description String
+  createdAt   DateTime          @default(now())
+
+  @@index([bookingId])
+  @@index([payoutId])
+  @@index([accountType, createdAt])
+  @@map("ledger_entries")
+}
+
+// ============================================================================
+// COMMUNICATION, TRUST & SAFETY
+// ============================================================================
+
+model Conversation {
+  id         String   @id @default(uuid())
+  bookingId  String?
+  consumerId String
+  consumer   User     @relation("ConsumerConversations", fields: [consumerId], references: [id], onDelete: Cascade)
+  providerId String
+  provider   User     @relation("ProviderConversations", fields: [providerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  messages Message[]
+
+  @@unique([consumerId, providerId, bookingId])
+  @@index([consumerId])
+  @@index([providerId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("UserMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  ciphertext     String       @db.Text // Encrypted message payload at rest
+  iv             String // Initialization vector for AES-256-GCM
+  authTag        String? // Auth tag for AES-256-GCM verification
+  isEncrypted    Boolean      @default(true)
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String    @db.Text
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+model Dispute {
+  id              String        @id @default(uuid())
+  bookingId       String        @unique
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  raisedById      String
+  raisedBy        User          @relation("UserDisputes", fields: [raisedById], references: [id], onDelete: Restrict)
+  reason          String        @db.Text
+  status          DisputeStatus @default(OPEN)
+  adminNotes      String?       @db.Text
+  resolutionNotes String?       @db.Text
+  resolvedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@map("disputes")
+}
+
+model Report {
+  id             String       @id @default(uuid())
+  reporterId     String
+  reporter       User         @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Restrict)
+  reportedUserId String
+  reportedUser   User         @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Restrict)
+  bookingId      String?
+  booking        Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  category       String // HARASSMENT, UNPROFESSIONAL, FRAUD, NO_SHOW
+  reason         String       @db.Text
+  status         ReportStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([status, createdAt])
+  @@index([reportedUserId])
+  @@map("reports")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String // AUTH_LOGIN, CREDENTIAL_VERIFIED, BOOKING_REFUNDED
+  entityType String
+  entityId   String
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+model ConsentRecord {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentType ConsentType
+  version     String
+  ipAddress   String?
+  userAgent   String?
+  grantedAt   DateTime    @default(now())
+  revokedAt   DateTime?
+
+  @@index([userId, consentType, revokedAt])
+  @@map("consent_records")
 }
