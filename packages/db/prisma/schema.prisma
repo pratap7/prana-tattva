@@ -242,6 +242,8 @@ model ProviderProfile {
   kycStatus        String?          @default("NOT_STARTED")
   bufferMinutes    Int              @default(15) // Rest buffer between sessions
   minNoticeHours   Int              @default(4) // Minimum booking notice in hours
+  completedSessions Int             @default(0) // Total completed client sessions
+  responseRate     Int              @default(100) // Practitioner response rate percentage (0-100)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

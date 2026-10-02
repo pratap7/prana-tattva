@@ -13,6 +13,7 @@ import { VerificationModule } from './modules/verification/verification.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { ServicesModule } from './modules/services/services.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AvailabilityModule } from './modules/availability/availability.module';
     ProvidersModule,
     ServicesModule,
     AvailabilityModule,
+    SearchModule,
   ],
 })
 export class AppModule implements NestModule {

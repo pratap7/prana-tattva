@@ -37,11 +37,11 @@ export function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-muted-foreground">
-          <Link href="/services" className="transition-colors hover:text-foreground">
-            Explore Modalities
+          <Link href="/explore" className="transition-colors hover:text-foreground">
+            Explore Sanctuary
           </Link>
           <Link href="/providers" className="transition-colors hover:text-foreground">
-            Verified Practitioners
+            Verified Guides
           </Link>
           <Link href="/how-it-works" className="transition-colors hover:text-foreground">
             How It Works
