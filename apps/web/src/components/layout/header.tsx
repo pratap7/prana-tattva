@@ -43,6 +43,18 @@ export function Header() {
           <Link href="/providers" className="transition-colors hover:text-foreground">
             Verified Guides
           </Link>
+          {isAuthenticated && user?.role === 'PROVIDER' ? (
+            <Link
+              href="/provider/bookings"
+              className="transition-colors hover:text-foreground font-semibold text-primary"
+            >
+              Calendar & Requests
+            </Link>
+          ) : isAuthenticated ? (
+            <Link href="/bookings" className="transition-colors hover:text-foreground">
+              My Bookings
+            </Link>
+          ) : null}
           <Link href="/how-it-works" className="transition-colors hover:text-foreground">
             How It Works
           </Link>

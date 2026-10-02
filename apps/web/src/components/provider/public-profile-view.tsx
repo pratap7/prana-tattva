@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api-client';
 import {
   ShieldCheck,
   Star,
@@ -19,6 +21,7 @@ import {
   AlertCircle,
   Play,
   X,
+  Loader2,
 } from 'lucide-react';
 import {
   Card,
@@ -78,6 +81,7 @@ export interface PublicProfileData {
 }
 
 export function PublicProfileView({ data }: { data: PublicProfileData }) {
+  const router = useRouter();
   const { profile, categories, services } = data;
   const [selectedService, setSelectedService] = useState<PublicProfileData['services'][0] | null>(
     null,
@@ -86,6 +90,37 @@ export function PublicProfileView({ data }: { data: PublicProfileData }) {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
+  const handleProceedToCheckout = async () => {
+    if (!chosenSlot || !selectedService) return;
+    setIsSubmittingBooking(true);
+    setBookingError(null);
+    try {
+      const res = await apiFetch<{ id: string }>('/bookings', {
+        method: 'POST',
+        body: JSON.stringify({
+          serviceId: selectedService.id,
+          startAt: chosenSlot.startUtc,
+        }),
+      });
+      router.push(`/bookings/${res.id}`);
+    } catch (err: unknown) {
+      const errorObj = err as { code?: string; statusCode?: number; message?: string };
+      if (errorObj?.statusCode === 401) {
+        router.push(`/login?redirect=/providers/${profile.slug}`);
+      } else if (errorObj?.code === 'SLOT_TEMPORARILY_LOCKED' || errorObj?.statusCode === 409) {
+        setBookingError(
+          'This slot was just selected by another seeker. Please pick an alternative time.',
+        );
+      } else {
+        setBookingError(errorObj?.message || 'Unable to place slot reservation. Please try again.');
+      }
+    } finally {
+      setIsSubmittingBooking(false);
+    }
+  };
 
   const handleShare = () => {
     if (typeof window !== 'undefined') {
@@ -644,6 +679,13 @@ export function PublicProfileView({ data }: { data: PublicProfileData }) {
                 onSelectSlot={(slot) => setChosenSlot(slot)}
               />
 
+              {bookingError && (
+                <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 p-3 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                  <span>{bookingError}</span>
+                </div>
+              )}
+
               <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
                 <Lock className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600" />
                 <span>
@@ -654,23 +696,29 @@ export function PublicProfileView({ data }: { data: PublicProfileData }) {
             </CardContent>
 
             <CardFooter className="bg-muted/20 px-6 py-4 border-t border-border/40 flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={() => setIsBookingModalOpen(false)}>
+              <Button
+                variant="outline"
+                disabled={isSubmittingBooking}
+                onClick={() => setIsBookingModalOpen(false)}
+              >
                 Cancel
               </Button>
               <Button
-                disabled={!chosenSlot}
-                onClick={() => {
-                  if (chosenSlot) {
-                    alert(
-                      `Sanctuary booking slot locked for ${selectedService.title} on ${chosenSlot.localDate} at ${chosenSlot.localDisplay} (${chosenSlot.viewerTimeZone})! Escrow checkout will proceed.`,
-                    );
-                    setIsBookingModalOpen(false);
-                  }
-                }}
+                disabled={!chosenSlot || isSubmittingBooking}
+                onClick={handleProceedToCheckout}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 gap-2"
               >
-                <Calendar className="h-4 w-4" />
-                Proceed to Sanctuary Checkout
+                {isSubmittingBooking ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Locking Slot...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="h-4 w-4" />
+                    Proceed to Sanctuary Checkout
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>

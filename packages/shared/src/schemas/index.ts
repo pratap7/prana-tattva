@@ -5,3 +5,4 @@ export * from './onboarding.schema.js';
 export * from './service.schema.js';
 export * from './availability.schema.js';
 export * from './search.schema.js';
+export * from './booking.schema.js';

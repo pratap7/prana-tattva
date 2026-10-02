@@ -14,10 +14,13 @@ import { ProvidersModule } from './modules/providers/providers.module';
 import { ServicesModule } from './modules/services/services.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
 import { SearchModule } from './modules/search/search.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
     LoggerModule.forRoot(getPinoLoggerConfig()),
+    EventEmitterModule.forRoot(),
     HealthModule,
     AuditModule,
     AuthModule,
@@ -30,6 +33,7 @@ import { SearchModule } from './modules/search/search.module';
     ServicesModule,
     AvailabilityModule,
     SearchModule,
+    BookingsModule,
   ],
 })
 export class AppModule implements NestModule {

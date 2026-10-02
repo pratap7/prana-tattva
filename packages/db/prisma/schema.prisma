@@ -244,6 +244,7 @@ model ProviderProfile {
   minNoticeHours   Int              @default(4) // Minimum booking notice in hours
   completedSessions Int             @default(0) // Total completed client sessions
   responseRate     Int              @default(100) // Practitioner response rate percentage (0-100)
+  reliabilityStrikes Int            @default(0) // Reliability strikes for provider cancellations
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -415,6 +416,10 @@ model Booking {
   commissionBps     Int           @map("commission_bps") // Commission snapshot at booking time
   notes             String?       @db.Text // Sensitive consultation notes (never logged)
   slotLockExpiresAt DateTime?     @map("slot_lock_expires_at") // Temporary lock during checkout
+  refundAmount      Int?          @map("refund_amount") // In paise
+  refundReason      String?       @map("refund_reason")
+  cancelledAt       DateTime?     @map("cancelled_at")
+  rescheduledCount  Int           @default(0) @map("rescheduled_count")
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 

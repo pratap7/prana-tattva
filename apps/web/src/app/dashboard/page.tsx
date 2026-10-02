@@ -54,8 +54,8 @@ export default function ConsumerDashboardPage() {
             <div className="text-2xl font-bold font-serif">0 Scheduled</div>
             <p className="text-xs text-muted-foreground mt-1">Book your next healing session</p>
             <Button size="sm" variant="outline" className="mt-4 w-full" asChild>
-              <Link href="/services">
-                Explore Healers
+              <Link href="/bookings">
+                View My Bookings
                 <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Link>
             </Button>

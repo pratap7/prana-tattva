@@ -211,16 +211,25 @@ export default function ProviderDashboardPage() {
 
       {/* Stats overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card className="hover:border-primary/50 transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">
-              Pending Bookings
+              Bookings & Calendar
             </CardTitle>
             <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-serif">0</div>
-            <p className="text-xs text-muted-foreground mt-1">Awaiting confirmation</p>
+            <div className="text-xl font-bold font-serif">
+              <Link
+                href="/provider/bookings"
+                className="hover:text-primary transition-colors flex items-center gap-1"
+              >
+                View Roster <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Manage client sessions & attendance
+            </p>
           </CardContent>
         </Card>
 
