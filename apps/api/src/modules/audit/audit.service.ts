@@ -8,6 +8,9 @@ export interface AuditLogParams {
   entityId: string;
   ipAddress?: string | null;
   userAgent?: string | null;
+  reason?: string | null;
+  beforeState?: Prisma.InputJsonValue;
+  afterState?: Prisma.InputJsonValue;
   metadata?: Prisma.InputJsonValue;
 }
 
@@ -25,6 +28,9 @@ export class AuditService {
           entityId: params.entityId,
           ipAddress: params.ipAddress ?? null,
           userAgent: params.userAgent ?? null,
+          reason: params.reason ?? null,
+          beforeState: params.beforeState ?? Prisma.DbNull,
+          afterState: params.afterState ?? Prisma.DbNull,
           metadata: params.metadata ?? Prisma.DbNull,
         },
       });

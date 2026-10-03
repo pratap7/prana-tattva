@@ -14,6 +14,7 @@ export interface UserSession {
   timeZone?: string;
   locale?: string;
   name?: string;
+  adminPermissions?: string[];
   providerProfile?: {
     id: string;
     displayName: string;
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timeZone: authData.user.timeZone,
       locale: authData.user.locale,
       name: authData.user.providerProfile?.displayName || authData.user.email.split('@')[0],
+      adminPermissions: authData.user.adminPermissions,
       providerProfile: authData.user.providerProfile,
     };
 

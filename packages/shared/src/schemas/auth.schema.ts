@@ -78,6 +78,7 @@ export const AuthUserSummarySchema = z.object({
   locale: z.string().optional(),
   isEmailVerified: z.boolean(),
   providerSlug: z.string().optional(),
+  adminPermissions: z.array(z.string()).optional(),
   providerProfile: z
     .object({
       id: z.string(),

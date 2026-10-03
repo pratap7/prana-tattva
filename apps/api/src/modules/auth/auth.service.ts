@@ -42,6 +42,7 @@ export class AuthService {
     status: UserStatus;
     timeZone: string;
     emailVerifiedAt: Date | null;
+    adminPermissions?: string[] | null;
     providerProfile?: { slug: string; displayName: string } | null;
   }): AuthUserSummary {
     return {
@@ -53,6 +54,7 @@ export class AuthService {
       timeZone: user.timeZone,
       isEmailVerified: user.emailVerifiedAt !== null,
       providerSlug: user.providerProfile?.slug,
+      adminPermissions: (user.adminPermissions as string[]) || [],
     };
   }
 

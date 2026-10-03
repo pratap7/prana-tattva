@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function AdminVerificationPage() {
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-8 max-w-7xl">
+    <div className="space-y-6">
       <VerificationQueue />
     </div>
   );

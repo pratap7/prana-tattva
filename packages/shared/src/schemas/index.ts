@@ -11,3 +11,4 @@ export * from './session.schema.js';
 export * from './messaging.schema.js';
 export * from './notification.schema.js';
 export * from './review.schema.js';
+export * from './admin.schema.js';
